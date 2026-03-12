@@ -126,11 +126,11 @@ export default function App() {
               <div className="w-24 h-24 md:w-32 md:h-32 bg-[#F2D027] rounded-full flex items-center justify-center border-4 border-black/10 shadow-inner relative z-10">
                 <div className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-full overflow-hidden flex items-center justify-center p-2 shadow-sm">
                   <img 
-                    src="https://uk5freenew.listen2myradio.com/logo.png" 
+                    src="/src/images/icon-kaew.png" 
                     alt="Station Logo" 
                     className="w-full h-auto"
                     onError={(e) => {
-                      e.currentTarget.src = "https://picsum.photos/seed/kukaew/200/200";
+                      e.currentTarget.src = "https://uk5freenew.listen2myradio.com/logo.png";
                     }}
                   />
                 </div>
