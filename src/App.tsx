@@ -25,14 +25,32 @@ export default function App() {
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [showClosedModal, setShowClosedModal] = useState(false);
+  const [showCookieConsent, setShowCookieConsent] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    audioRef.current = new Audio(STREAM_URL);
-    audioRef.current.volume = volume;
+    // Check for cookie consent
+    const consent = localStorage.getItem('kukaew_cookie_consent');
+    if (!consent) {
+      setShowCookieConsent(true);
+    }
+
+    const audio = new Audio(STREAM_URL);
+    audio.volume = volume;
+    
+    const handleError = () => {
+      console.error("Audio stream error");
+      setIsPlaying(false);
+      setShowClosedModal(true);
+    };
+
+    audio.addEventListener('error', handleError);
+    audioRef.current = audio;
     
     return () => {
       if (audioRef.current) {
+        audioRef.current.removeEventListener('error', handleError);
         audioRef.current.pause();
         audioRef.current = null;
       }
@@ -50,12 +68,25 @@ export default function App() {
 
     if (isPlaying) {
       audioRef.current.pause();
+      setIsPlaying(false);
     } else {
       // For live streams, it's often better to reload to get the latest buffer
       audioRef.current.src = STREAM_URL;
-      audioRef.current.play().catch(err => console.error("Playback failed:", err));
+      audioRef.current.play()
+        .then(() => {
+          setIsPlaying(true);
+        })
+        .catch(err => {
+          console.error("Playback failed:", err);
+          setIsPlaying(false);
+          setShowClosedModal(true);
+        });
     }
-    setIsPlaying(!isPlaying);
+  };
+
+  const handleAcceptCookies = () => {
+    localStorage.setItem('kukaew_cookie_consent', 'accepted');
+    setShowCookieConsent(false);
   };
 
   return (
@@ -295,6 +326,81 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Station Closed Modal */}
+      <AnimatePresence>
+        {showClosedModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowClosedModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl relative z-10 text-center"
+            >
+              <div className="w-20 h-20 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <RadioIcon size={40} />
+              </div>
+              <h3 className="text-2xl font-bold text-radio-dark mb-2">ขออภัยในความไม่สะดวก</h3>
+              <p className="text-gray-500 mb-8 leading-relaxed">
+              ขณะนี้สถานีอยู่ในช่วงเวลาปิดสถานี<br />กรุณาติดตามรับฟังใหม่อีกครั้งในภายหลัง
+              </p>
+              <button
+                onClick={() => setShowClosedModal(false)}
+                className="w-full bg-radio-dark text-white py-4 rounded-2xl font-bold hover:bg-opacity-90 transition-all shadow-lg"
+              >
+                ตกลง
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Cookie Consent Banner */}
+      <AnimatePresence>
+        {showCookieConsent && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:max-w-md z-[110]"
+          >
+            <div className="bg-white rounded-3xl p-6 shadow-2xl border border-gray-100 flex flex-col gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-radio-green/10 text-radio-green rounded-2xl flex items-center justify-center shrink-0">
+                  <Globe size={24} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-radio-dark">การใช้คุกกี้ (Cookies)</h4>
+                  <p className="text-sm text-gray-500 leading-relaxed mt-1">
+                    เราใช้คุกกี้เพื่อเพิ่มประสิทธิภาพและประสบการณ์ที่ดีในการใช้งานเว็บไซต์ คุณสามารถศึกษารายละเอียดเพิ่มเติมได้ที่นโยบายความเป็นส่วนตัว
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={handleAcceptCookies}
+                  className="flex-1 bg-radio-dark text-white py-3 rounded-xl font-bold text-sm hover:bg-opacity-90 transition-all"
+                >
+                  ยอมรับทั้งหมด
+                </button>
+                <button
+                  onClick={() => setShowCookieConsent(false)}
+                  className="px-6 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-100 transition-all"
+                >
+                  ตั้งค่า
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
