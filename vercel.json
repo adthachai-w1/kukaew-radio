@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/stream",
+      "destination": "https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847"
+    }
+  ]
+}
