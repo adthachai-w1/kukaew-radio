@@ -1,109 +1,95 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import https from 'https';
-import http from 'http';
+// api/stream.ts — Vercel Edge Function with full error visibility
+
+export const config = {
+  runtime: 'edge',
+};
 
 const UPSTREAM =
   'http://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
 
-export const config = {
-  api: {
-    responseLimit: false,   // ปิด limit — stream ต้องไหลต่อเนื่อง
-    bodyParser: false,
-  },
-};
+export default async function handler(req: Request): Promise<Response> {
+  const url = new URL(req.url);
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+  // ─── /api/stream?debug=1  →  แสดง error JSON ─────────────────────────────
+  const debug = url.searchParams.get('debug') === '1';
+
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Range');
-    return res.status(204).end();
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders(),
+    });
   }
 
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'no-cache, no-store');
-  res.setHeader('X-Accel-Buffering', 'no');
+  // ── ลอง fetch upstream และดัก error ทุกกรณี ────────────────────────────────
+  let upstream: Response;
+  try {
+    upstream = await fetch(UPSTREAM, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; RadioProxy/3.0)',
+        'Accept': 'audio/mpeg, audio/*, */*',
+        ...(req.headers.get('icy-metadata') ? { 'Icy-MetaData': '1' } : {}),
+      },
+      redirect: 'follow',
+    });
+  } catch (err: any) {
+    // fetch ล้มเหลวทั้งหมด (network error, DNS fail, HTTP บล็อก ฯลฯ)
+    const detail = {
+      stage: 'fetch_upstream',
+      error: err?.message ?? String(err),
+      upstream_url: UPSTREAM,
+      hint: 'Vercel Edge อาจบล็อก outbound HTTP — ลองเปลี่ยน upstream เป็น HTTPS',
+    };
+    console.error('[stream] fetch error:', detail);
+    return new Response(JSON.stringify(detail, null, 2), {
+      status: 502,
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+    });
+  }
 
-  fetchStream(UPSTREAM, req, res, 0);
+  // ── upstream ตอบกลับแต่ status ไม่ดี ────────────────────────────────────────
+  if (!upstream.ok) {
+    const body = await upstream.text().catch(() => '');
+    const detail = {
+      stage: 'upstream_response',
+      status: upstream.status,
+      statusText: upstream.statusText,
+      body: body.slice(0, 300),
+      upstream_url: UPSTREAM,
+    };
+    console.error('[stream] bad upstream status:', detail);
+    return new Response(JSON.stringify(detail, null, 2), {
+      status: 502,
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+    });
+  }
+
+  // ── upstream body เป็น null (ไม่มี stream) ─────────────────────────────────
+  if (!upstream.body) {
+    return new Response(
+      JSON.stringify({ error: 'upstream.body is null — no stream data' }),
+      { status: 502, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // ── ✅ ทุกอย่างโอเค — relay stream ──────────────────────────────────────────
+  const resHeaders = new Headers(corsHeaders());
+  resHeaders.set('Content-Type', upstream.headers.get('content-type') ?? 'audio/mpeg');
+  resHeaders.set('Cache-Control', 'no-cache, no-store');
+  resHeaders.set('X-Accel-Buffering', 'no');
+
+  for (const h of ['icy-name','icy-genre','icy-url','icy-br','icy-sr','icy-metaint']) {
+    const v = upstream.headers.get(h);
+    if (v) resHeaders.set(h, v);
+  }
+
+  return new Response(upstream.body, { status: 200, headers: resHeaders });
 }
 
-function fetchStream(
-  url: string,
-  req: VercelRequest,
-  res: VercelResponse,
-  redirectCount: number
-) {
-  if (redirectCount > 5) {
-    return res.status(502).json({ error: 'Too many redirects' });
-  }
-
-  const parsed = new URL(url);
-  const lib = parsed.protocol === 'https:' ? https : http;
-
-  const options: http.RequestOptions = {
-    hostname: parsed.hostname,
-    port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
-    path: parsed.pathname + parsed.search,
-    method: 'GET',
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; RadioProxy/2.0)',
-      'Accept': 'audio/mpeg, audio/*, */*',
-      'Connection': 'keep-alive',
-      ...(req.headers['icy-metadata'] ? { 'Icy-MetaData': '1' } : {}),
-    },
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Range, Content-Type',
   };
-
-  const proxyReq = lib.request(options, (upstream) => {
-    const status = upstream.statusCode ?? 0;
-
-    // ติดตาม redirect
-    if ([301, 302, 307, 308].includes(status)) {
-      const location = upstream.headers['location'];
-      upstream.destroy();
-      if (!location) return res.status(502).json({ error: 'Redirect with no location' });
-      return fetchStream(location, req, res, redirectCount + 1);
-    }
-
-    if (status < 200 || status >= 300) {
-      upstream.destroy();
-      return res.status(502).json({ error: `Upstream status ${status}` });
-    }
-
-    // ส่ง headers ที่จำเป็นต่อ client
-    const pass = [
-      'content-type',
-      'content-length',
-      'accept-ranges',
-      'transfer-encoding',
-      'icy-name',
-      'icy-genre',
-      'icy-url',
-      'icy-br',
-      'icy-sr',
-      'icy-metaint',
-    ];
-
-    // Force audio/mpeg ถ้า upstream ไม่ส่ง content-type
-    res.setHeader('Content-Type', upstream.headers['content-type'] ?? 'audio/mpeg');
-
-    pass.forEach((h) => {
-      const v = upstream.headers[h];
-      if (v) res.setHeader(h, v);
-    });
-
-    res.status(200);
-    upstream.pipe(res);
-
-    req.on('close', () => upstream.destroy());
-    req.on('aborted', () => upstream.destroy());
-  });
-
-  proxyReq.on('error', (err) => {
-    console.error('[proxy error]', err.message);
-    if (!res.headersSent) {
-      res.status(502).json({ error: 'Proxy error', detail: err.message });
-    }
-  });
-
-  proxyReq.end();
 }
