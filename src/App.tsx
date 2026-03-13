@@ -20,8 +20,7 @@ import {
   VolumeX,
   Plus,
   Minus
-} from 'lucide-react';  
-
+} from 'lucide-react';
 import iconKaew from "./images/icon-kaew.png";
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -45,45 +44,31 @@ export default function App() {
       setShowCookieConsent(true);
     }
 
-    const audio = new Audio();
-    audio.volume = volume;
-    
-    const handleCanPlay = () => {
-      setIsLoading(false);
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-      }
-    };
-
-    const handleError = (e: any) => {
-      console.error("Audio stream error:", e);
-      
-      // If we're not currently trying to load or play, ignore errors 
-      // (prevents modal when stopping/clearing source)
-      if (audioRef.current && (audioRef.current.src === "" || audioRef.current.src === window.location.href)) {
-        return;
-      }
-
-      setIsLoading(false);
-      setIsPlaying(false);
-      setShowClosedModal(true);
-    };
-
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('error', handleError);
-    audioRef.current = audio;
-
     return () => {
-      if (audioRef.current) {
-        audioRef.current.removeEventListener('canplay', handleCanPlay);
-        audioRef.current.removeEventListener('error', handleError);
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
       if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
     };
   }, []);
+
+  const handleCanPlay = () => {
+    setIsLoading(false);
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  };
+
+  const handleError = (e: any) => {
+    console.error("Audio stream error:", e);
+    
+    // If we're not currently trying to load or play, ignore errors 
+    if (audioRef.current && (audioRef.current.src === "" || audioRef.current.src === window.location.href)) {
+      return;
+    }
+
+    setIsLoading(false);
+    setIsPlaying(false);
+    setShowClosedModal(true);
+  };
 
   useEffect(() => {
     if (audioRef.current) {
@@ -96,28 +81,39 @@ export default function App() {
 
     if (isPlaying) {
       audioRef.current.pause();
-      audioRef.current.src = ""; // Clear source to stop downloading
+      // Use a small delay before clearing src to avoid some mobile browser issues
+      audioRef.current.src = ""; 
+      audioRef.current.load();
       setIsPlaying(false);
       setIsLoading(false);
       if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
     } else {
       setIsLoading(true);
+      setShowClosedModal(false);
       
-      // Set a timeout: if it doesn't play in 15 seconds, show the "Closed" modal
+      // Set a timeout: if it doesn't play in 20 seconds (increased for mobile data), show the "Closed" modal
       loadingTimeoutRef.current = setTimeout(() => {
-        if (isLoading || !isPlaying) {
+        if (!audioRef.current || audioRef.current.paused) {
           setIsLoading(false);
           setShowClosedModal(true);
         }
-      }, 15000);
+      }, 20000);
 
-      audioRef.current.src = STREAM_URL;
+      // Add a cache-buster for mobile networks
+      const streamWithBuster = `${STREAM_URL}&t=${Date.now()}`;
+      audioRef.current.src = streamWithBuster;
       audioRef.current.load();
-      audioRef.current.play()
-        .then(() => {
+      
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
           setIsPlaying(true);
-        })
-        .catch(err => {
+          setIsLoading(false);
+          if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+            loadingTimeoutRef.current = null;
+          }
+        }).catch(err => {
           console.error("Playback failed:", err);
           if (err.name !== 'AbortError') {
             setIsLoading(false);
@@ -125,6 +121,7 @@ export default function App() {
             setShowClosedModal(true);
           }
         });
+      }
     }
   };
 
@@ -133,7 +130,6 @@ export default function App() {
     setShowCookieConsent(false);
   };
 
-  
   const toggleMute = () => {
     setIsMuted(!isMuted);
   };
@@ -141,7 +137,6 @@ export default function App() {
   const adjustVolume = (amount: number) => {
     setVolume(prev => {
       const newVol = Math.min(1, Math.max(0, prev + amount));
-      if (audioRef.current) audioRef.current.volume = newVol;
       if (newVol > 0) setIsMuted(false);
       return newVol;
     });
@@ -149,6 +144,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Hidden Audio Element for better mobile support */}
+      <audio
+        ref={audioRef}
+        onCanPlay={handleCanPlay}
+        onError={handleError}
+        preload="none"
+        crossOrigin="anonymous"
+      />
+      
       {/* Header */}
       <header className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 z-50">
         <div className="flex items-center gap-3">
