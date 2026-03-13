@@ -36,6 +36,8 @@ export default function App() {
   const [showCookieConsent, setShowCookieConsent] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Track whether we intentionally stopped playback (user pressed pause)
+  const intentionalStopRef = useRef(false);
 
   useEffect(() => {
     // Check for cookie consent
@@ -59,9 +61,14 @@ export default function App() {
 
   const handleError = (e: any) => {
     console.error("Audio stream error:", e);
-    
-    // If we're not currently trying to load or play, ignore errors 
-    if (audioRef.current && (audioRef.current.src === "" || audioRef.current.src === window.location.href)) {
+
+    // Ignore errors when we intentionally stopped (user pressed pause/stop)
+    if (intentionalStopRef.current) {
+      return;
+    }
+
+    // If audio has no src set, this is a spurious error — ignore
+    if (!audioRef.current || !audioRef.current.src || audioRef.current.src === window.location.href) {
       return;
     }
 
@@ -80,30 +87,39 @@ export default function App() {
     if (!audioRef.current) return;
 
     if (isPlaying) {
+      // Mark as intentional stop so error handler is silenced
+      intentionalStopRef.current = true;
       audioRef.current.pause();
-      // Use a small delay before clearing src to avoid some mobile browser issues
-      audioRef.current.src = ""; 
+      audioRef.current.src = "";
       audioRef.current.load();
       setIsPlaying(false);
       setIsLoading(false);
       if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+      // Reset flag after a short delay to allow error events to fire and be ignored
+      setTimeout(() => { intentionalStopRef.current = false; }, 500);
     } else {
+      intentionalStopRef.current = false;
       setIsLoading(true);
       setShowClosedModal(false);
-      
-      // Set a timeout: if it doesn't play in 20 seconds (increased for mobile data), show the "Closed" modal
+
+      // Timeout increased to 45s for slow mobile (3G/4G) connections
       loadingTimeoutRef.current = setTimeout(() => {
         if (!audioRef.current || audioRef.current.paused) {
           setIsLoading(false);
+          setIsPlaying(false);
           setShowClosedModal(true);
         }
-      }, 20000);
+      }, 45000);
 
-      // Add a cache-buster for mobile networks
+      // Cache-buster to bypass CDN / proxy caching on mobile networks
       const streamWithBuster = `${STREAM_URL}&t=${Date.now()}`;
+      // NOTE: crossOrigin is intentionally NOT set here.
+      // Setting crossOrigin="anonymous" causes CORS preflight failures on many
+      // mobile carriers / SIM data connections, resulting in the stream being
+      // blocked even when the server is up.
       audioRef.current.src = streamWithBuster;
       audioRef.current.load();
-      
+
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
         playPromise.then(() => {
@@ -115,6 +131,7 @@ export default function App() {
           }
         }).catch(err => {
           console.error("Playback failed:", err);
+          // AbortError fires when src is cleared mid-load — not a real failure
           if (err.name !== 'AbortError') {
             setIsLoading(false);
             setIsPlaying(false);
@@ -144,13 +161,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Hidden Audio Element for better mobile support */}
+      {/* Hidden Audio Element — no crossOrigin attribute (fixes mobile SIM CORS issues) */}
       <audio
         ref={audioRef}
         onCanPlay={handleCanPlay}
         onError={handleError}
         preload="none"
-        crossOrigin="anonymous"
       />
       
       {/* Header */}
@@ -398,10 +414,6 @@ export default function App() {
                 <MapPin size={18} className="text-radio-green" />
                 <span>อำเภอกู่แก้ว, จังหวัดอุดรธานี, ประเทศไทย</span>
               </li>
-              {/* <li className="flex items-center gap-3">
-                <Mail size={18} className="text-radio-green" />
-                <span>hello@kukaewradio.com</span>
-              </li> */}
               <li className="flex items-center gap-3">
                 <User size={18} className="text-radio-green" />
                 <span>จ่าเยี่ยม คนโก้</span>
@@ -510,4 +522,4 @@ export default function App() {
       </AnimatePresence>
     </div>
   );
-}
+}  
