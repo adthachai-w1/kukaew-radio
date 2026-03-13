@@ -14,7 +14,8 @@ import {
   Mail,
   Facebook,
   Youtube,
-  Globe
+  Globe  
+, User 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -199,12 +200,12 @@ export default function App() {
           <div className="flex-1 text-center md:text-left">
             <span className="text-white/70 text-sm font-bold uppercase tracking-widest mb-2 block">กำลังเล่น</span>
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-              ฟังเพลงหมอลำสดๆ<br />พร้อมกันที่นี่
+              ฟังเพลงแบบสดๆ<br />พร้อมกันที่นี่
             </h2>
             
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full mb-8">
-              <span className="text-white/90 text-sm font-medium">ดีเจ จ่าเยี่ยม คนโก้</span>
-              <span className="text-white/50 text-xs font-bold uppercase">กำลังจัดรายการ</span>
+                <span className="text-[#397D54] text-sm font-medium">ดีเจ จ่าเยี่ยม คนโก้</span>
+              <span className="text-[#397D54] text-xs font-bold uppercase">กำลังจัดรายการ</span>
             </div>
 
             {/* Progress Bar (Visual only for live stream) */}
@@ -280,7 +281,7 @@ export default function App() {
               <h2 className="font-bold text-2xl">KUKAEW RADIO</h2>
             </div>
             <p className="text-white/60 leading-relaxed max-w-xs">
-              นำเสนอเสียงเพลงแห่งจิตวิญญาณอีสานแท้ๆ ทั้งหมอลำ ลูกทุ่ง และบรรยากาศชุมชน ตั้งแต่ปี 1998
+              นำเสนอเสียงเพลงแห่งจิตวิญญาณอีสานแท้ๆ ทั้งหมอลำ ลูกทุ่ง และบรรยากาศชุมชน 
             </p>
           </div>
 
@@ -289,15 +290,19 @@ export default function App() {
             <ul className="space-y-4 text-white/70">
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-radio-green" />
-                <span>+66 93 123 4567</span>
+                <span>0819853404</span>
               </li>
               <li className="flex items-center gap-3">
                 <MapPin size={18} className="text-radio-green" />
                 <span>อำเภอกู่แก้ว, จังหวัดอุดรธานี, ประเทศไทย</span>
               </li>
-              <li className="flex items-center gap-3">
+              {/* <li className="flex items-center gap-3">
                 <Mail size={18} className="text-radio-green" />
                 <span>hello@kukaewradio.com</span>
+              </li> */}
+              <li className="flex items-center gap-3">
+                <User size={18} className="text-radio-green" />
+                <span>จ่าเยี่ยม คนโก้</span>
               </li>
             </ul>
           </div>
