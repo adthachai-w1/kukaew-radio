@@ -1,11 +1,3 @@
-// api/stream.js
-// Vercel Serverless Function (vanilla JS — ใช้ได้กับ Vite + React บน Vercel)
-// ไม่ต้องมี Next.js
-
-export const config = {
-  runtime: 'edge',
-};
-
 const UPSTREAM =
   'http://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
 
