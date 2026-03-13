@@ -14,8 +14,12 @@ import {
   Mail,
   Facebook,
   Youtube,
-  Globe  
-, User 
+  Globe,
+  User ,
+  Volume2,
+  VolumeX,
+  Plus,
+  Minus
 } from 'lucide-react';
 import iconKaew from "./images/icon-kaew.png";  
 import { motion, AnimatePresence } from 'motion/react';
@@ -89,6 +93,20 @@ export default function App() {
   const handleAcceptCookies = () => {
     localStorage.setItem('kukaew_cookie_consent', 'accepted');
     setShowCookieConsent(false);
+  };
+
+  
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  const adjustVolume = (amount: number) => {
+    setVolume(prev => {
+      const newVol = Math.min(1, Math.max(0, prev + amount));
+      if (audioRef.current) audioRef.current.volume = newVol;
+      if (newVol > 0) setIsMuted(false);
+      return newVol;
+    });
   };
 
   return (
@@ -247,6 +265,43 @@ export default function App() {
               <button className="text-white/60 hover:text-white transition-colors">
                 <Repeat size={20} />
               </button>
+            </div>
+
+            
+            {/* Volume Controls */}
+            <div className="mt-8 flex items-center justify-center md:justify-start gap-4">
+              <button 
+                onClick={toggleMute}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+              
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm p-1 rounded-xl">
+                <button 
+                  onClick={() => adjustVolume(-0.1)}
+                  className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <Minus size={16} />
+                </button>
+                
+                <div className="w-24 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-white"
+                    animate={{ width: isMuted ? "0%" : `${volume * 100}%` }}
+                  />
+                </div>
+
+                <button 
+                  onClick={() => adjustVolume(0.1)}
+                  className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <span className="text-white/60 text-xs font-bold w-8">
+                {isMuted ? '0%' : `${Math.round(volume * 100)}%`}
+              </span>
             </div>
 
             {/* Visualizer bars */}
