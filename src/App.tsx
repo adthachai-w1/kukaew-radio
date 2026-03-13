@@ -20,8 +20,8 @@ import {
   VolumeX,
   Plus,
   Minus
-} from 'lucide-react';
-const iconKaew = "/src/images/icon-kaew.png";  
+} from 'lucide-react';  
+const iconKaew = "./images/icon-kaew.png";  
 import { motion, AnimatePresence } from 'motion/react';
 
 const STREAM_URL = 'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
