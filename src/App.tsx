@@ -17,6 +17,7 @@ import {
   Globe  
 , User 
 } from 'lucide-react';
+import iconKaew from "./images/icon-kaew.png";  
 import { motion, AnimatePresence } from 'motion/react';
 
 const STREAM_URL = 'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
@@ -158,11 +159,11 @@ export default function App() {
               <div className="w-24 h-24 md:w-32 md:h-32 bg-[#F2D027] rounded-full flex items-center justify-center border-4 border-black/10 shadow-inner relative z-10">
                 <div className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-full overflow-hidden flex items-center justify-center p-2 shadow-sm">
                   <img 
-                    src="/images/icon-kaew.png" 
+                   src={iconKaew}
                     alt="Station Logo" 
                     className="w-full h-auto"
                     onError={(e) => {
-                      e.currentTarget.src = "/src/images/icon-kaew.png";
+                      e.currentTarget.src = "https://uk5freenew.listen2myradio.com/logo.png";
                     }}
                   />
                 </div>
