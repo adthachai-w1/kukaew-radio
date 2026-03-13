@@ -21,19 +21,21 @@ import {
   Plus,
   Minus
 } from 'lucide-react';
-import iconKaew from "./images/icon-kaew.png";  
+const iconKaew = "/src/images/icon-kaew.png";  
 import { motion, AnimatePresence } from 'motion/react';
 
 const STREAM_URL = 'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
 
 export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
   const [showCookieConsent, setShowCookieConsent] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Check for cookie consent
@@ -42,24 +44,43 @@ export default function App() {
       setShowCookieConsent(true);
     }
 
-    const audio = new Audio(STREAM_URL);
+    const audio = new Audio();
     audio.volume = volume;
     
-    const handleError = () => {
-      console.error("Audio stream error");
+    const handleCanPlay = () => {
+      setIsLoading(false);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    };
+
+    const handleError = (e: any) => {
+      console.error("Audio stream error:", e);
+      
+      // If we're not currently trying to load or play, ignore errors 
+      // (prevents modal when stopping/clearing source)
+      if (audioRef.current && (audioRef.current.src === "" || audioRef.current.src === window.location.href)) {
+        return;
+      }
+
+      setIsLoading(false);
       setIsPlaying(false);
       setShowClosedModal(true);
     };
 
+    audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('error', handleError);
     audioRef.current = audio;
-    
+
     return () => {
       if (audioRef.current) {
+        audioRef.current.removeEventListener('canplay', handleCanPlay);
         audioRef.current.removeEventListener('error', handleError);
         audioRef.current.pause();
         audioRef.current = null;
       }
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
     };
   }, []);
 
@@ -74,18 +95,34 @@ export default function App() {
 
     if (isPlaying) {
       audioRef.current.pause();
+      audioRef.current.src = ""; // Clear source to stop downloading
       setIsPlaying(false);
+      setIsLoading(false);
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
     } else {
-      // For live streams, it's often better to reload to get the latest buffer
+      setIsLoading(true);
+      
+      // Set a timeout: if it doesn't play in 15 seconds, show the "Closed" modal
+      loadingTimeoutRef.current = setTimeout(() => {
+        if (isLoading || !isPlaying) {
+          setIsLoading(false);
+          setShowClosedModal(true);
+        }
+      }, 15000);
+
       audioRef.current.src = STREAM_URL;
+      audioRef.current.load();
       audioRef.current.play()
         .then(() => {
           setIsPlaying(true);
         })
         .catch(err => {
           console.error("Playback failed:", err);
-          setIsPlaying(false);
-          setShowClosedModal(true);
+          if (err.name !== 'AbortError') {
+            setIsLoading(false);
+            setIsPlaying(false);
+            setShowClosedModal(true);
+          }
         });
     }
   };
@@ -152,7 +189,7 @@ export default function App() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="glass-card w-full max-w-2xl rounded-[40px] p-8 md:p-12 shadow-2xl flex flex-col md:flex-row items-center gap-10 relative z-10"
+          className="glass-card w-full max-w-2xl rounded-[40px] p-8 md:p-10 shadow-2xl flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10"
         >
           {/* Vinyl Record Player */}
           <div className="relative group">
@@ -162,7 +199,7 @@ export default function App() {
             <motion.div 
               animate={isPlaying ? { rotate: 360 } : { rotate: 0 }}
               transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="relative w-64 h-64 md:w-80 md:h-80 rounded-full shadow-2xl flex items-center justify-center overflow-hidden"
+              className="relative w-64 h-64 md:w-72 md:h-72 rounded-full shadow-2xl flex items-center justify-center overflow-hidden"
               style={{
                 background: 'radial-gradient(circle, #333 0%, #111 70%, #000 100%)',
                 boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5)'
@@ -174,8 +211,8 @@ export default function App() {
               }}></div>
 
               {/* Center Label (Yellow part from the image) */}
-              <div className="w-24 h-24 md:w-32 md:h-32 bg-[#F2D027] rounded-full flex items-center justify-center border-4 border-black/10 shadow-inner relative z-10">
-                <div className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-full overflow-hidden flex items-center justify-center p-2 shadow-sm">
+              <div className="w-24 h-24 md:w-28 md:h-28 bg-[#F2D027] rounded-full flex items-center justify-center border-4 border-black/10 shadow-inner relative z-10">
+                <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-full overflow-hidden flex items-center justify-center p-2 shadow-sm">
                   <img 
                    src={iconKaew}
                     alt="Station Logo" 
@@ -216,7 +253,7 @@ export default function App() {
           </div>
 
           {/* Player Info & Controls */}
-          <div className="flex-1 text-center md:text-left">
+          <div className="flex-1 min-w-0 text-center md:text-left">
             <span className="text-white/70 text-sm font-bold uppercase tracking-widest mb-2 block">กำลังเล่น</span>
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
               ฟังเพลงแบบสดๆ<br />พร้อมกันที่นี่
@@ -254,9 +291,13 @@ export default function App() {
               
               <button 
                 onClick={togglePlay}
-                className="w-16 h-16 bg-white text-radio-green rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all"
+                className="w-16 h-16 bg-white text-radio-green rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all relative"
               >
-                {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
+                {isLoading ? (
+                  <div className="w-8 h-8 border-4 border-radio-green/30 border-t-radio-green rounded-full animate-spin"></div>
+                ) : (
+                  isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />
+                )}
               </button>
 
               <button className="text-white/80 hover:text-white transition-colors">
