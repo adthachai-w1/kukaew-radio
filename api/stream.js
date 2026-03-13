@@ -1,5 +1,5 @@
 const UPSTREAM =
-  'http://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
+  'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
