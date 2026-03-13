@@ -3,8 +3,9 @@ export const config = {
 };
 
 export default async function handler(req) {
-  const streamUrl = 'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
-
+  //const streamUrl = 'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
+    const streamUrl = 'http://uk5freenew.listen2myradio.com:7046/;'
+      
   const response = await fetch(streamUrl, {
     headers: {
       // แกล้งทำเป็น browser ธรรมดา ไม่ใช่ server
