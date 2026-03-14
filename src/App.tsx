@@ -34,7 +34,7 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
-  const [showSimModal, setShowSimModal] = useState(false); // 🆕 modal เน็ตซิม
+  const [showSimModal, setShowSimModal] = useState(false);
   const [showCookieConsent, setShowCookieConsent] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -47,14 +47,12 @@ export default function App() {
   const STALL_WAIT_MS = 8000;
   const LOAD_TIMEOUT_MS = 45000;
 
-  // ─── โหลด stream ────────────────────────────────────────────────────────
   const loadStream = () => {
     if (!audioRef.current) return;
     audioRef.current.src = `${STREAM_URL}&t=${Date.now()}`;
     audioRef.current.load();
   };
 
-  // ─── ยกเลิก stall timer ─────────────────────────────────────────────────
   const clearStallTimer = () => {
     if (stallTimerRef.current) {
       clearTimeout(stallTimerRef.current);
@@ -62,38 +60,30 @@ export default function App() {
     }
   };
 
-  // 🆕 ─── แสดง modal ที่ถูกต้อง (ซิม vs ปิดสถานี) ──────────────────────
-  // ถ้า retry ครบ → แสดง modal เน็ตซิมก่อน ให้ผู้ใช้ลองปลดล็อกก่อน
-  // modal สถานีปิดจะแสดงก็ต่อเมื่อกด "ลองใหม่" แล้วยังไม่ได้อีก
   const showFailureModal = () => {
     setIsPlaying(false);
     setIsLoading(false);
-    setShowSimModal(true); // แสดง sim modal ก่อนเสมอ
+    setShowSimModal(true);
   };
 
-  // ─── จัดการ stall ───────────────────────────────────────────────────────
   const handleStall = () => {
     if (intentionalStopRef.current) return;
     clearStallTimer();
-
     stallTimerRef.current = setTimeout(() => {
       if (!audioRef.current || intentionalStopRef.current) return;
-
       if (retryCountRef.current < MAX_RETRIES) {
         retryCountRef.current++;
         loadStream();
         audioRef.current.play().catch(() => {});
       } else {
-        showFailureModal(); // 🆕 ใช้ฟังก์ชันใหม่
+        showFailureModal();
       }
     }, STALL_WAIT_MS);
   };
 
-  // ─── จัดการ error ───────────────────────────────────────────────────────
   const handleError = () => {
     if (intentionalStopRef.current) return;
     if (!audioRef.current?.src || audioRef.current.src === window.location.href) return;
-
     if (retryCountRef.current < MAX_RETRIES) {
       retryCountRef.current++;
       setTimeout(() => {
@@ -102,11 +92,10 @@ export default function App() {
         audioRef.current?.play().catch(() => {});
       }, 2000);
     } else {
-      showFailureModal(); // 🆕 ใช้ฟังก์ชันใหม่
+      showFailureModal();
     }
   };
 
-  // ─── stream พร้อมเล่น ───────────────────────────────────────────────────
   const handleCanPlay = () => {
     clearStallTimer();
     retryCountRef.current = 0;
@@ -117,7 +106,6 @@ export default function App() {
     }
   };
 
-  // ─── เล่นจริงๆ แล้ว ────────────────────────────────────────────────────
   const handlePlaying = () => {
     clearStallTimer();
     retryCountRef.current = 0;
@@ -125,50 +113,39 @@ export default function App() {
     setIsPlaying(true);
   };
 
-  // ─── Volume ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
     }
   }, [volume, isMuted]);
 
-  // ─── Cookie consent ─────────────────────────────────────────────────────
   useEffect(() => {
     const consent = localStorage.getItem('kukaew_cookie_consent');
     if (!consent) setShowCookieConsent(true);
-
     return () => {
       if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
       clearStallTimer();
     };
   }, []);
 
-  // 🆕 ─── Fetch Warmup — ส่ง request ก่อนเพื่อให้ proxy ของซิมอนุญาต ────
   const warmUpStream = async () => {
     try {
       await fetch(STREAM_URL, { method: 'GET', mode: 'no-cors' });
-    } catch (_) {
-      // ไม่ต้องทำอะไร — แค่ให้ proxy เห็น request
-    }
+    } catch (_) {}
   };
 
-  // ─── Play / Pause ───────────────────────────────────────────────────────
   const togglePlay = async () => {
     if (!audioRef.current) return;
-
     if (isPlaying) {
       intentionalStopRef.current = true;
       clearStallTimer();
       if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
-
       audioRef.current.pause();
       audioRef.current.src = "";
       audioRef.current.load();
-
       setIsPlaying(false);
       setIsLoading(false);
       retryCountRef.current = 0;
-
       setTimeout(() => { intentionalStopRef.current = false; }, 500);
     } else {
       intentionalStopRef.current = false;
@@ -176,18 +153,13 @@ export default function App() {
       setIsLoading(true);
       setShowClosedModal(false);
       setShowSimModal(false);
-
-      // 🆕 Warmup fetch ก่อน — ช่วยเรื่อง proxy เน็ตซิม
       await warmUpStream();
-
       loadingTimeoutRef.current = setTimeout(() => {
         if (!audioRef.current || audioRef.current.paused) {
-          showFailureModal(); // 🆕 timeout → แสดง sim modal ก่อน
+          showFailureModal();
         }
       }, LOAD_TIMEOUT_MS);
-
       loadStream();
-
       audioRef.current.play()
         .then(() => {
           setIsPlaying(true);
@@ -199,17 +171,15 @@ export default function App() {
         })
         .catch(err => {
           if (err.name !== 'AbortError') {
-            showFailureModal(); // 🆕
+            showFailureModal();
           }
         });
     }
   };
 
-  // 🆕 ─── ผู้ใช้กด "ลองใหม่" หลังจากเปิด unlock URL แล้ว ────────────────
   const retryAfterUnlock = () => {
     setShowSimModal(false);
     retryCountRef.current = 0;
-    // รอ 1 วิให้ modal ปิดก่อน แล้วค่อย play
     setTimeout(() => togglePlay(), 1000);
   };
 
@@ -230,7 +200,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* ─── Hidden Audio ──────────────────────────────────────────────── */}
       <audio
         ref={audioRef}
         onCanPlay={handleCanPlay}
@@ -241,7 +210,7 @@ export default function App() {
         preload="none"
       />
 
-      {/* ─── Header ──────────────────────────────────────────────────────── */}
+      {/* Header */}
       <header className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-radio-green rounded-full flex items-center justify-center text-white shadow-sm">
@@ -252,12 +221,10 @@ export default function App() {
             <p className="text-xs text-gray-500 font-medium tracking-wider">FM 93.00 MHz</p>
           </div>
         </div>
-
         <nav className="hidden md:flex items-center gap-8">
           <a href="#" className="text-radio-dark font-semibold border-b-2 border-radio-green pb-1">หน้าแรก</a>
           <a href="#" className="text-gray-500 hover:text-radio-dark transition-colors font-medium">วิทยุสด</a>
         </nav>
-
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
             <Users size={16} className="text-gray-400" />
@@ -270,13 +237,12 @@ export default function App() {
         </div>
       </header>
 
-      {/* ─── Main ────────────────────────────────────────────────────────── */}
+      {/* Main */}
       <main className="flex-1 bg-radio-green flex items-center justify-center p-6 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-white rounded-full blur-3xl"></div>
           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-white rounded-full blur-3xl"></div>
         </div>
-
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -311,14 +277,12 @@ export default function App() {
               </div>
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none"></div>
             </motion.div>
-
             <button
               onClick={() => setIsLiked(!isLiked)}
               className={`absolute bottom-4 right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-30 transition-all ${isLiked ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-500'}`}
             >
               <Heart size={24} fill={isLiked ? "currentColor" : "none"} />
             </button>
-
             <div className="absolute -top-4 -right-8 w-32 h-40 pointer-events-none hidden md:block">
               <motion.div
                 animate={{ rotate: isPlaying ? 25 : 0 }}
@@ -339,12 +303,10 @@ export default function App() {
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
               ฟังเพลงแบบสดๆ<br />พร้อมกันที่นี่
             </h2>
-
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full mb-8">
               <span className="text-[#397D54] text-sm font-medium">ดีเจ จ่าเยี่ยม คนโก้</span>
               <span className="text-[#397D54] text-xs font-bold uppercase">กำลังจัดรายการ</span>
             </div>
-
             <div className="mb-8">
               <div className="flex justify-between text-white/60 text-xs font-bold mb-2">
                 <span>03:45</span>
@@ -359,11 +321,9 @@ export default function App() {
                 <div className="absolute top-1/2 left-[70%] -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md border-2 border-radio-green"></div>
               </div>
             </div>
-
             <div className="flex items-center justify-center md:justify-start gap-6">
               <button className="text-white/60 hover:text-white transition-colors"><Shuffle size={20} /></button>
               <button className="text-white/80 hover:text-white transition-colors"><SkipBack size={28} fill="currentColor" /></button>
-
               <button
                 onClick={togglePlay}
                 className="w-16 h-16 bg-white text-radio-green rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all relative"
@@ -376,11 +336,9 @@ export default function App() {
                   <Play size={32} fill="currentColor" className="ml-1" />
                 )}
               </button>
-
               <button className="text-white/80 hover:text-white transition-colors"><SkipForward size={28} fill="currentColor" /></button>
               <button className="text-white/60 hover:text-white transition-colors"><Repeat size={20} /></button>
             </div>
-
             <div className="mt-8 flex items-center justify-center md:justify-start gap-4">
               <button onClick={toggleMute} className="text-white/80 hover:text-white transition-colors">
                 {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
@@ -400,7 +358,6 @@ export default function App() {
                 {isMuted ? '0%' : `${Math.round(volume * 100)}%`}
               </span>
             </div>
-
             <div className="mt-10 flex items-end justify-center md:justify-start gap-1 h-8">
               {[...Array(12)].map((_, i) => (
                 <motion.div
@@ -415,7 +372,7 @@ export default function App() {
         </motion.div>
       </main>
 
-      {/* ─── Footer ──────────────────────────────────────────────────────── */}
+      {/* Footer */}
       <footer className="bg-radio-dark text-white p-10 md:p-16">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="space-y-6">
@@ -429,7 +386,6 @@ export default function App() {
               นำเสนอเสียงเพลงแห่งจิตวิญญาณอีสานแท้ๆ ทั้งหมอลำ ลูกทุ่ง และบรรยากาศชุมชน
             </p>
           </div>
-
           <div className="space-y-6">
             <h3 className="font-bold text-lg border-b border-white/10 pb-2">ติดต่อเรา</h3>
             <ul className="space-y-4 text-white/70">
@@ -438,7 +394,6 @@ export default function App() {
               <li className="flex items-center gap-3"><User size={18} className="text-radio-green" /><span>จ่าเยี่ยม คนโก้</span></li>
             </ul>
           </div>
-
           <div className="space-y-6">
             <h3 className="font-bold text-lg border-b border-white/10 pb-2">ติดตามเรา</h3>
             <div className="flex gap-4">
@@ -448,7 +403,6 @@ export default function App() {
             </div>
           </div>
         </div>
-
         <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
           <p>© 2024 กู่แก้ววิทยุ FM 93.00 MHz. สงวนลิขสิทธิ์</p>
           <div className="flex gap-8">
@@ -458,7 +412,7 @@ export default function App() {
         </div>
       </footer>
 
-      {/* ─── 🆕 SIM Network Modal ─────────────────────────────────────────── */}
+      {/* SIM Network Modal */}
       <AnimatePresence>
         {showSimModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -482,11 +436,13 @@ export default function App() {
                 <span className="font-semibold text-radio-dark">ปลดล็อกสัญญาณวิทยุ</span><br />
                 แล้วกลับมากด <span className="font-semibold text-radio-green">ลองใหม่</span>
               </p>
-              href={UNLOCK_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg">
-              {"\uD83D\uDD13"} แตะเพื่อปลดล็อกเน็ตซิม
+              <a 
+                href={UNLOCK_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg"
+              >
+                แตะเพื่อปลดล็อกเน็ตซิม
               </a>
               <button
                 onClick={retryAfterUnlock}
@@ -505,7 +461,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* ─── Station Closed Modal ─────────────────────────────────────────── */}
+      {/* Station Closed Modal */}
       <AnimatePresence>
         {showClosedModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -538,7 +494,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* ─── Cookie Consent ───────────────────────────────────────────────── */}
+      {/* Cookie Consent */}
       <AnimatePresence>
         {showCookieConsent && (
           <motion.div
