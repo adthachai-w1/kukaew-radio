@@ -19,7 +19,8 @@ import {
   VolumeX,
   Plus,
   Minus,
-  Wifi
+  Wifi,
+  X
 } from 'lucide-react';
 import iconKaew from "./images/icon-kaew.png";
 import { motion, AnimatePresence } from 'motion/react';
@@ -35,6 +36,7 @@ export default function App() {
   const [isLiked, setIsLiked] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
   const [showSimModal, setShowSimModal] = useState(false);
+  const [showUnlockFrame, setShowUnlockFrame] = useState(false);
   const [showCookieConsent, setShowCookieConsent] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -179,6 +181,7 @@ export default function App() {
 
   const retryAfterUnlock = () => {
     setShowSimModal(false);
+    setShowUnlockFrame(false);
     retryCountRef.current = 0;
     setTimeout(() => togglePlay(), 1000);
   };
@@ -414,7 +417,7 @@ export default function App() {
 
       {/* SIM Network Modal */}
       <AnimatePresence>
-        {showSimModal && (
+        {showSimModal && !showUnlockFrame && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -436,14 +439,12 @@ export default function App() {
                 <span className="font-semibold text-radio-dark">ปลดล็อกสัญญาณวิทยุ</span><br />
                 แล้วกลับมากด <span className="font-semibold text-radio-green">ลองใหม่</span>
               </p>
-              <a 
-                href={UNLOCK_URL}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                onClick={() => setShowUnlockFrame(true)}
                 className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg"
               >
                 แตะเพื่อปลดล็อกเน็ตซิม
-              </a>
+              </button>
               <button
                 onClick={retryAfterUnlock}
                 className="w-full bg-radio-dark text-white py-4 rounded-2xl font-bold mb-3 hover:bg-opacity-90 transition-all shadow-lg"
@@ -456,6 +457,67 @@ export default function App() {
               >
                 ไม่ใช่เน็ตซิม → ดูสาเหตุอื่น
               </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Unlock iframe Modal */}
+      <AnimatePresence>
+        {showUnlockFrame && (
+          <div className="fixed inset-0 z-[200] flex flex-col">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative z-10 flex flex-col w-full h-full max-w-2xl mx-auto mt-10 rounded-t-[32px] overflow-hidden bg-white shadow-2xl"
+            >
+              {/* iframe header bar */}
+              <div className="flex items-center justify-between px-5 py-3 bg-gray-100 border-b border-gray-200 shrink-0">
+                <div className="flex items-center gap-2">
+                  <Wifi size={18} className="text-blue-500" />
+                  <span className="text-sm font-semibold text-gray-700">ปลดล็อกเน็ตซิม</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400 truncate max-w-[140px] hidden sm:block">
+                    {UNLOCK_URL}
+                  </span>
+                  <button
+                    onClick={() => setShowUnlockFrame(false)}
+                    className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-all"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* iframe content */}
+              <iframe
+                src={UNLOCK_URL}
+                className="flex-1 w-full border-none"
+                title="Unlock SIM Stream"
+              />
+
+              {/* bottom action bar */}
+              <div className="shrink-0 px-5 py-4 bg-white border-t border-gray-100 flex gap-3">
+                <button
+                  onClick={() => setShowUnlockFrame(false)}
+                  className="flex-1 py-3 rounded-2xl font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={retryAfterUnlock}
+                  className="flex-1 py-3 rounded-2xl font-bold text-white bg-radio-green hover:bg-opacity-90 transition-all shadow-md"
+                >
+                  ปลดล็อกแล้ว ลองใหม่
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
@@ -527,4 +589,4 @@ export default function App() {
       </AnimatePresence>
     </div>
   );
-}
+            }
