@@ -482,13 +482,11 @@ export default function App() {
                 <span className="font-semibold text-radio-dark">ปลดล็อกสัญญาณวิทยุ</span><br />
                 แล้วกลับมากด <span className="font-semibold text-radio-green">ลองใหม่</span>
               </p>
-              
-                href={UNLOCK_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg"
-              >
-                 แตะเพื่อปลดล็อกเน็ตซิม
+              href={UNLOCK_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg">
+              {"\uD83D\uDD13"} แตะเพื่อปลดล็อกเน็ตซิม
               </a>
               <button
                 onClick={retryAfterUnlock}
