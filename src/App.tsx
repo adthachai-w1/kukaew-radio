@@ -23,13 +23,14 @@ import {
 } from 'lucide-react';
 import iconKaew from "./images/icon-kaew.png";
 import { motion, AnimatePresence } from 'motion/react';
-   
+ 
+const STREAM_URL = "https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847"; 
 //const STREAM_URL = 'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
  //const STREAM_URL = '/stream';
     
  //const STREAM_URL = '/api/stream';
   
- const STREAM_URL = 'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
+ //const STREAM_URL = 'https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847';
   //const STREAM_URL = 'http://uk5freenew.listen2myradio.com:13082/;stream.mp3';
   //const STREAM_URL = 'https://kukaew-radio.adthachai-w1.workers.dev';
       
