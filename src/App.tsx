@@ -18,12 +18,14 @@ import {
   Volume2,
   VolumeX,
   Plus,
-  Minus
+  Minus,
+  Wifi
 } from 'lucide-react';
 import iconKaew from "./images/icon-kaew.png";
 import { motion, AnimatePresence } from 'motion/react';
 
 const STREAM_URL = "https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847";
+const UNLOCK_URL = "https://fm93kukeawradio.radio12345.com/";
 
 export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -32,6 +34,7 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
+  const [showSimModal, setShowSimModal] = useState(false); // 🆕 modal เน็ตซิม
   const [showCookieConsent, setShowCookieConsent] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -41,18 +44,17 @@ export default function App() {
   const stallTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const MAX_RETRIES = 3;
-  const STALL_WAIT_MS = 8000;   // รอ 8 วิ ถ้าค้าง แล้ว retry
-  const LOAD_TIMEOUT_MS = 45000; // timeout รวม 45 วิ สำหรับเน็ตซิมช้า
+  const STALL_WAIT_MS = 8000;
+  const LOAD_TIMEOUT_MS = 45000;
 
-  // ─── โหลด stream (ใช้ซ้ำทั้ง play ครั้งแรก และ retry) ───────────────────
+  // ─── โหลด stream ────────────────────────────────────────────────────────
   const loadStream = () => {
     if (!audioRef.current) return;
-    // ❌ ห้ามตั้ง crossOrigin — ทำให้ CORS preflight fail บนเน็ตซิม
     audioRef.current.src = `${STREAM_URL}&t=${Date.now()}`;
     audioRef.current.load();
   };
 
-  // ─── ยกเลิก stall timer ──────────────────────────────────────────────────
+  // ─── ยกเลิก stall timer ─────────────────────────────────────────────────
   const clearStallTimer = () => {
     if (stallTimerRef.current) {
       clearTimeout(stallTimerRef.current);
@@ -60,7 +62,16 @@ export default function App() {
     }
   };
 
-  // ─── จัดการเมื่อ stream ค้าง (stalled/waiting) ───────────────────────────
+  // 🆕 ─── แสดง modal ที่ถูกต้อง (ซิม vs ปิดสถานี) ──────────────────────
+  // ถ้า retry ครบ → แสดง modal เน็ตซิมก่อน ให้ผู้ใช้ลองปลดล็อกก่อน
+  // modal สถานีปิดจะแสดงก็ต่อเมื่อกด "ลองใหม่" แล้วยังไม่ได้อีก
+  const showFailureModal = () => {
+    setIsPlaying(false);
+    setIsLoading(false);
+    setShowSimModal(true); // แสดง sim modal ก่อนเสมอ
+  };
+
+  // ─── จัดการ stall ───────────────────────────────────────────────────────
   const handleStall = () => {
     if (intentionalStopRef.current) return;
     clearStallTimer();
@@ -73,19 +84,16 @@ export default function App() {
         loadStream();
         audioRef.current.play().catch(() => {});
       } else {
-        setIsPlaying(false);
-        setIsLoading(false);
-        setShowClosedModal(true);
+        showFailureModal(); // 🆕 ใช้ฟังก์ชันใหม่
       }
     }, STALL_WAIT_MS);
   };
 
-  // ─── จัดการ error ────────────────────────────────────────────────────────
+  // ─── จัดการ error ───────────────────────────────────────────────────────
   const handleError = () => {
     if (intentionalStopRef.current) return;
     if (!audioRef.current?.src || audioRef.current.src === window.location.href) return;
 
-    // Auto-retry ก่อน แสดง modal เมื่อหมด retry
     if (retryCountRef.current < MAX_RETRIES) {
       retryCountRef.current++;
       setTimeout(() => {
@@ -94,13 +102,11 @@ export default function App() {
         audioRef.current?.play().catch(() => {});
       }, 2000);
     } else {
-      setIsLoading(false);
-      setIsPlaying(false);
-      setShowClosedModal(true);
+      showFailureModal(); // 🆕 ใช้ฟังก์ชันใหม่
     }
   };
 
-  // ─── เมื่อ stream พร้อมเล่น ──────────────────────────────────────────────
+  // ─── stream พร้อมเล่น ───────────────────────────────────────────────────
   const handleCanPlay = () => {
     clearStallTimer();
     retryCountRef.current = 0;
@@ -111,7 +117,7 @@ export default function App() {
     }
   };
 
-  // ─── เมื่อเล่นจริงๆ แล้ว ─────────────────────────────────────────────────
+  // ─── เล่นจริงๆ แล้ว ────────────────────────────────────────────────────
   const handlePlaying = () => {
     clearStallTimer();
     retryCountRef.current = 0;
@@ -119,14 +125,14 @@ export default function App() {
     setIsPlaying(true);
   };
 
-  // ─── Volume ──────────────────────────────────────────────────────────────
+  // ─── Volume ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
     }
   }, [volume, isMuted]);
 
-  // ─── Cookie consent ──────────────────────────────────────────────────────
+  // ─── Cookie consent ─────────────────────────────────────────────────────
   useEffect(() => {
     const consent = localStorage.getItem('kukaew_cookie_consent');
     if (!consent) setShowCookieConsent(true);
@@ -137,8 +143,17 @@ export default function App() {
     };
   }, []);
 
-  // ─── Play / Pause ────────────────────────────────────────────────────────
-  const togglePlay = () => {
+  // 🆕 ─── Fetch Warmup — ส่ง request ก่อนเพื่อให้ proxy ของซิมอนุญาต ────
+  const warmUpStream = async () => {
+    try {
+      await fetch(STREAM_URL, { method: 'GET', mode: 'no-cors' });
+    } catch (_) {
+      // ไม่ต้องทำอะไร — แค่ให้ proxy เห็น request
+    }
+  };
+
+  // ─── Play / Pause ───────────────────────────────────────────────────────
+  const togglePlay = async () => {
     if (!audioRef.current) return;
 
     if (isPlaying) {
@@ -160,13 +175,14 @@ export default function App() {
       retryCountRef.current = 0;
       setIsLoading(true);
       setShowClosedModal(false);
+      setShowSimModal(false);
 
-      // Global timeout — ถ้า 45 วิยังไม่ได้ยิน ถือว่าล้มเหลว
+      // 🆕 Warmup fetch ก่อน — ช่วยเรื่อง proxy เน็ตซิม
+      await warmUpStream();
+
       loadingTimeoutRef.current = setTimeout(() => {
         if (!audioRef.current || audioRef.current.paused) {
-          setIsLoading(false);
-          setIsPlaying(false);
-          setShowClosedModal(true);
+          showFailureModal(); // 🆕 timeout → แสดง sim modal ก่อน
         }
       }, LOAD_TIMEOUT_MS);
 
@@ -183,12 +199,18 @@ export default function App() {
         })
         .catch(err => {
           if (err.name !== 'AbortError') {
-            setIsLoading(false);
-            setIsPlaying(false);
-            setShowClosedModal(true);
+            showFailureModal(); // 🆕
           }
         });
     }
+  };
+
+  // 🆕 ─── ผู้ใช้กด "ลองใหม่" หลังจากเปิด unlock URL แล้ว ────────────────
+  const retryAfterUnlock = () => {
+    setShowSimModal(false);
+    retryCountRef.current = 0;
+    // รอ 1 วิให้ modal ปิดก่อน แล้วค่อย play
+    setTimeout(() => togglePlay(), 1000);
   };
 
   const toggleMute = () => setIsMuted(prev => !prev);
@@ -208,7 +230,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* ─── Hidden Audio — ❌ ไม่ใส่ crossOrigin (fixes mobile SIM CORS) ─── */}
+      {/* ─── Hidden Audio ──────────────────────────────────────────────── */}
       <audio
         ref={audioRef}
         onCanPlay={handleCanPlay}
@@ -435,6 +457,55 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* ─── 🆕 SIM Network Modal ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showSimModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowSimModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl relative z-10 text-center"
+            >
+              <div className="w-20 h-20 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Wifi size={40} />
+              </div>
+              <h3 className="text-2xl font-bold text-radio-dark mb-2">ใช้เน็ตซิมอยู่ใช่ไหม?</h3>
+              <p className="text-gray-500 mb-6 leading-relaxed">
+                หากใช้เน็ตซิม (AIS / DTAC / TRUE) กรุณาแตะปุ่มด้านล่างเพื่อ<br />
+                <span className="font-semibold text-radio-dark">ปลดล็อกสัญญาณวิทยุ</span><br />
+                แล้วกลับมากด <span className="font-semibold text-radio-green">ลองใหม่</span>
+              </p>
+              
+                href={UNLOCK_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg"
+              >
+                🔓 แตะเพื่อปลดล็อกเน็ตซิม
+              </a>
+              <button
+                onClick={retryAfterUnlock}
+                className="w-full bg-radio-dark text-white py-4 rounded-2xl font-bold mb-3 hover:bg-opacity-90 transition-all shadow-lg"
+              >
+                ลองใหม่
+              </button>
+              <button
+                onClick={() => { setShowSimModal(false); setShowClosedModal(true); }}
+                className="w-full py-3 rounded-2xl font-medium text-gray-400 hover:text-gray-600 transition-all"
+              >
+                ไม่ใช่เน็ตซิม → ดูสาเหตุอื่น
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ─── Station Closed Modal ─────────────────────────────────────────── */}
       <AnimatePresence>
