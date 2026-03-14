@@ -488,7 +488,7 @@ export default function App() {
                 rel="noreferrer"
                 className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg"
               >
-                🔓 แตะเพื่อปลดล็อกเน็ตซิม
+                <span>🔓</span> แตะเพื่อปลดล็อกเน็ตซิม
               </a>
               <button
                 onClick={retryAfterUnlock}
