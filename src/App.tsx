@@ -444,7 +444,7 @@ export default function App() {
                 onClick={() => setShowUnlockFrame(true)}
                 className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg"
               >
-                แตะเพื่อเปิดรับสัญญาณ
+                เปิดรับสัญญาณ    
               </button>
               <button
                 onClick={retryAfterUnlock}
