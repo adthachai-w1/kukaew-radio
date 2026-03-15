@@ -433,17 +433,18 @@ export default function App() {
               <div className="w-20 h-20 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Wifi size={40} />
               </div>
-              <h3 className="text-2xl font-bold text-radio-dark mb-2">ใช้เน็ตซิมอยู่ใช่ไหม?</h3>
+              <h3 className="text-2xl font-bold text-radio-dark mb-2">การเชื่อมต่อผิดพลาด</h3>
               <p className="text-gray-500 mb-6 leading-relaxed">
-                หากใช้เน็ตซิม (AIS / DTAC / TRUE) กรุณาแตะปุ่มด้านล่างเพื่อ<br />
-                <span className="font-semibold text-radio-dark">ปลดล็อกสัญญาณวิทยุ</span><br />
+                 หากมีปัญหาการรับสัญญาณวิทยุ<br />
+                 กรุณาแตะปุ่มด้านล่างเพื่อ<br />
+                <span className="font-semibold text-radio-dark">เปิดรับสัญญาณ</span><br />
                 แล้วกลับมากด <span className="font-semibold text-radio-green">ลองใหม่</span>
               </p>
               <button
                 onClick={() => setShowUnlockFrame(true)}
                 className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg"
               >
-                แตะเพื่อปลดล็อกเน็ตซิม
+                แตะเพื่อเปิดรับสัญญาณ
               </button>
               <button
                 onClick={retryAfterUnlock}
@@ -455,7 +456,7 @@ export default function App() {
                 onClick={() => { setShowSimModal(false); setShowClosedModal(true); }}
                 className="w-full py-3 rounded-2xl font-medium text-gray-400 hover:text-gray-600 transition-all"
               >
-                ไม่ใช่เน็ตซิม → ดูสาเหตุอื่น
+                ไม่ใช่สัญญาณ → ดูสาเหตุอื่น
               </button>
             </motion.div>
           </div>
@@ -515,9 +516,9 @@ export default function App() {
                   onClick={retryAfterUnlock}
                   className="flex-1 py-3 rounded-2xl font-bold text-white bg-radio-green hover:bg-opacity-90 transition-all shadow-md"
                 >
-                  ปลดล็อกแล้ว ลองใหม่
+                  รับสัญญาณแล้ว ลองใหม่
                 </button>
-              </div>
+              </div>  
             </motion.div>
           </div>
         )}
