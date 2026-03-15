@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import iconKaew from "./images/icon-kaew.png";
 import { motion, AnimatePresence } from 'motion/react';
+import COVER_IMAGE_URL from "./images/photo-1.png";
+
 
 const STREAM_URL = "https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847";
 const UNLOCK_URL = "https://fm93kukeawradio.radio12345.com/";
@@ -253,7 +255,7 @@ export default function App() {
           className="glass-card w-full max-w-2xl rounded-[40px] p-8 md:p-10 shadow-2xl flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10"
         >
           {/* Vinyl */}
-          <div className="relative group">
+          {/* <div className="relative group">
             <div className="absolute inset-0 bg-black/20 rounded-full blur-2xl transform translate-y-4 scale-90"></div>
             <motion.div
               animate={isPlaying ? { rotate: 360 } : { rotate: 0 }}
@@ -298,7 +300,23 @@ export default function App() {
                 <div className="absolute bottom-4 left-4 w-6 h-10 bg-gray-500 rounded-sm shadow-sm"></div>
               </motion.div>
             </div>
-          </div>
+          </div> */}
+
+        {/* Cover Image */}
+      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-[32px] shadow-2xl overflow-hidden border-4 border-white/20">
+        <img
+          src={COVER_IMAGE_URL} // ไฟล์รูปภาพ /input_file_0.png
+          alt="DJ Cover"  
+          className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+           <button
+              onClick={() => setIsLiked(!isLiked)}
+              className={`absolute bottom-4 right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-30 transition-all ${isLiked ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-500'}`}
+            >
+              <Heart size={24} fill={isLiked ? "currentColor" : "none"} />
+            </button>
+      </div>
 
           {/* Controls */}
           <div className="flex-1 min-w-0 text-center md:text-left">
