@@ -500,7 +500,7 @@ export default function App() {
               <div className="flex items-center justify-between px-5 py-3 bg-gray-100 border-b border-gray-200 shrink-0">
                 <div className="flex items-center gap-2">
                   <Wifi size={18} className="text-blue-500" />
-                  <span className="text-sm font-semibold text-gray-700">ปลดล็อกเน็ตซิม</span>
+                  <span className="text-sm font-semibold text-gray-700">ปลดล็อกสัญญาณ</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-400 truncate max-w-[140px] hidden sm:block">
