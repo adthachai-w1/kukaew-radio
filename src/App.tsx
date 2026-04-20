@@ -211,6 +211,7 @@ export default function App() {
         src={UNLOCK_URL}
         title="bg-unlock"
         onLoad={() => setUnlockLoaded(true)}
+        sandbox="allow-scripts allow-same-origin"
         style={{ position: 'fixed', top: -9999, left: -9999, width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
       />
 
