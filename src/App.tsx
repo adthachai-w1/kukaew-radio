@@ -26,8 +26,7 @@ import iconKaew from "./images/icon-kaew.png";
 import { motion, AnimatePresence } from 'motion/react';
 import COVER_IMAGE_URL from "./images/photo-1.png";
 
-
-const STREAM_URL = "https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_697042847";
+const STREAM_URL = "https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_820118366";
 const UNLOCK_URL = "https://fm93kukeawradio.radio12345.com/";
 
 export default function App() {
@@ -40,6 +39,7 @@ export default function App() {
   const [showSimModal, setShowSimModal] = useState(false);
   const [showUnlockFrame, setShowUnlockFrame] = useState(false);
   const [showCookieConsent, setShowCookieConsent] = useState(false);
+  const [unlockLoaded, setUnlockLoaded] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -132,12 +132,6 @@ export default function App() {
     };
   }, []);
 
-  const warmUpStream = async () => {
-    try {
-      await fetch(STREAM_URL, { method: 'GET', mode: 'no-cors' });
-    } catch (_) {}
-  };
-
   const togglePlay = async () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -157,12 +151,18 @@ export default function App() {
       setIsLoading(true);
       setShowClosedModal(false);
       setShowSimModal(false);
-      await warmUpStream();
+
+      // รอให้ hidden iframe โหลดก่อน (max 3 วิ)
+      if (!unlockLoaded) {
+        await new Promise(res => setTimeout(res, 3000));
+      }
+
       loadingTimeoutRef.current = setTimeout(() => {
         if (!audioRef.current || audioRef.current.paused) {
           showFailureModal();
         }
       }, LOAD_TIMEOUT_MS);
+
       loadStream();
       audioRef.current.play()
         .then(() => {
@@ -205,6 +205,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+
+      {/* Hidden iframe โหลดหลังบ้าน เพื่อให้ browser รู้จัก domain ก่อน play */}
+      <iframe
+        src={UNLOCK_URL}
+        title="bg-unlock"
+        onLoad={() => setUnlockLoaded(true)}
+        style={{ position: 'fixed', top: -9999, left: -9999, width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
+      />
+
       <audio
         ref={audioRef}
         onCanPlay={handleCanPlay}
@@ -254,69 +263,20 @@ export default function App() {
           transition={{ duration: 0.6 }}
           className="glass-card w-full max-w-2xl rounded-[40px] p-8 md:p-10 shadow-2xl flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10"
         >
-          {/* Vinyl */}
-          {/* <div className="relative group">
-            <div className="absolute inset-0 bg-black/20 rounded-full blur-2xl transform translate-y-4 scale-90"></div>
-            <motion.div
-              animate={isPlaying ? { rotate: 360 } : { rotate: 0 }}
-              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="relative w-64 h-64 md:w-72 md:h-72 rounded-full shadow-2xl flex items-center justify-center overflow-hidden"
-              style={{
-                background: 'radial-gradient(circle, #333 0%, #111 70%, #000 100%)',
-                boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5)'
-              }}
-            >
-              <div className="absolute inset-0 opacity-30" style={{
-                backgroundImage: 'repeating-radial-gradient(circle, transparent, transparent 2px, rgba(255,255,255,0.05) 3px, transparent 4px)',
-              }}></div>
-              <div className="w-24 h-24 md:w-28 md:h-28 bg-[#F2D027] rounded-full flex items-center justify-center border-4 border-black/10 shadow-inner relative z-10">
-                <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-full overflow-hidden flex items-center justify-center p-2 shadow-sm">
-                  <img
-                    src={iconKaew}
-                    alt="Station Logo"
-                    className="w-full h-auto"
-                    onError={(e) => { e.currentTarget.src = "https://uk5freenew.listen2myradio.com/logo.png"; }}
-                  />
-                </div>
-                <div className="absolute w-3 h-3 bg-radio-dark rounded-full shadow-inner z-20"></div>
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none"></div>
-            </motion.div>
+          {/* Cover Image */}
+          <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-[32px] shadow-2xl overflow-hidden border-4 border-white/20">
+            <img
+              src={COVER_IMAGE_URL}
+              alt="DJ Cover"
+              className="w-full h-full object-cover"
+            />
             <button
               onClick={() => setIsLiked(!isLiked)}
               className={`absolute bottom-4 right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-30 transition-all ${isLiked ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-500'}`}
             >
               <Heart size={24} fill={isLiked ? "currentColor" : "none"} />
             </button>
-            <div className="absolute -top-4 -right-8 w-32 h-40 pointer-events-none hidden md:block">
-              <motion.div
-                animate={{ rotate: isPlaying ? 25 : 0 }}
-                transition={{ duration: 1 }}
-                style={{ transformOrigin: 'top right' }}
-                className="w-full h-full relative"
-              >
-                <div className="absolute top-0 right-0 w-8 h-8 bg-gray-400 rounded-full shadow-md"></div>
-                <div className="absolute top-4 right-3 w-2 h-32 bg-gray-300 rounded-full origin-top rotate-[15deg] shadow-sm"></div>
-                <div className="absolute bottom-4 left-4 w-6 h-10 bg-gray-500 rounded-sm shadow-sm"></div>
-              </motion.div>
-            </div>
-          </div> */}
-
-        {/* Cover Image */}
-      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-[32px] shadow-2xl overflow-hidden border-4 border-white/20">
-        <img
-          src={COVER_IMAGE_URL} // ไฟล์รูปภาพ /input_file_0.png
-          alt="DJ Cover"  
-          className="w-full h-full object-cover"
-          referrerPolicy="no-referrer"
-        />
-           <button
-              onClick={() => setIsLiked(!isLiked)}
-              className={`absolute bottom-4 right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-30 transition-all ${isLiked ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-500'}`}
-            >
-              <Heart size={24} fill={isLiked ? "currentColor" : "none"} />
-            </button>
-      </div>
+          </div>
 
           {/* Controls */}
           <div className="flex-1 min-w-0 text-center md:text-left">
@@ -453,8 +413,8 @@ export default function App() {
               </div>
               <h3 className="text-2xl font-bold text-radio-dark mb-2">การเชื่อมต่อผิดพลาด</h3>
               <p className="text-gray-500 mb-6 leading-relaxed">
-                 หากมีปัญหาการรับสัญญาณวิทยุ<br />
-                 กรุณาแตะปุ่มด้านล่างเพื่อ<br />
+                หากมีปัญหาการรับสัญญาณวิทยุ<br />
+                กรุณาแตะปุ่มด้านล่างเพื่อ<br />
                 <span className="font-semibold text-radio-dark">เปิดรับสัญญาณ</span><br />
                 แล้วกลับมากด <span className="font-semibold text-radio-green">ลองใหม่</span>
               </p>
@@ -462,7 +422,7 @@ export default function App() {
                 onClick={() => setShowUnlockFrame(true)}
                 className="block w-full bg-blue-500 text-white py-4 rounded-2xl font-bold mb-3 hover:bg-blue-600 transition-all shadow-lg"
               >
-                เปิดรับสัญญาณ    
+                เปิดรับสัญญาณ
               </button>
               <button
                 onClick={retryAfterUnlock}
@@ -496,16 +456,13 @@ export default function App() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="relative z-10 flex flex-col w-full h-full max-w-2xl mx-auto mt-10 rounded-t-[32px] overflow-hidden bg-white shadow-2xl"
             >
-              {/* iframe header bar */}
               <div className="flex items-center justify-between px-5 py-3 bg-gray-100 border-b border-gray-200 shrink-0">
                 <div className="flex items-center gap-2">
                   <Wifi size={18} className="text-blue-500" />
                   <span className="text-sm font-semibold text-gray-700">ปลดล็อกสัญญาณ</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400 truncate max-w-[140px] hidden sm:block">
-                    {UNLOCK_URL}
-                  </span>
+                  <span className="text-xs text-gray-400 truncate max-w-[140px] hidden sm:block">{UNLOCK_URL}</span>
                   <button
                     onClick={() => setShowUnlockFrame(false)}
                     className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition-all"
@@ -514,15 +471,7 @@ export default function App() {
                   </button>
                 </div>
               </div>
-
-              {/* iframe content */}
-              <iframe
-                src={UNLOCK_URL}
-                className="flex-1 w-full border-none"
-                title="Unlock SIM Stream"
-              />
-
-              {/* bottom action bar */}
+              <iframe src={UNLOCK_URL} className="flex-1 w-full border-none" title="Unlock SIM Stream" />
               <div className="shrink-0 px-5 py-4 bg-white border-t border-gray-100 flex gap-3">
                 <button
                   onClick={() => setShowUnlockFrame(false)}
@@ -536,7 +485,7 @@ export default function App() {
                 >
                   รับสัญญาณแล้ว ลองใหม่
                 </button>
-              </div>  
+              </div>
             </motion.div>
           </div>
         )}
@@ -608,4 +557,4 @@ export default function App() {
       </AnimatePresence>
     </div>
   );
-            }
+}
