@@ -32,6 +32,95 @@ import iconKaew from "./images/icon-kaew.png";
 import { motion, AnimatePresence } from 'motion/react';
 import COVER_IMAGE_URL from "./images/photo-1.png";
 
+// ─── Leaflet Map Component ───────────────────────────────────────────────────
+function LeafletMap() {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (mapInstanceRef.current || !mapRef.current) return;
+
+    // Load Leaflet CSS
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    // Load Leaflet JS
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => {
+      const L = (window as any).L;
+      const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false }).setView([LAT, LNG], 11);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Signal radius circle — ~30km FM coverage
+      L.circle([LAT, LNG], {
+        radius: 30000,
+        color: '#4a8c5c',
+        weight: 2,
+        opacity: 0.8,
+        fillColor: '#4a8c5c',
+        fillOpacity: 0.12,
+        dashArray: '6, 4',
+      }).addTo(map);
+
+      // Inner stronger signal circle ~15km
+      L.circle([LAT, LNG], {
+        radius: 15000,
+        color: '#4a8c5c',
+        weight: 1.5,
+        opacity: 0.5,
+        fillColor: '#4a8c5c',
+        fillOpacity: 0.08,
+      }).addTo(map);
+
+      // Custom red marker
+      const icon = L.divIcon({
+        html: `
+          <div style="position:relative;width:36px;height:44px;">
+            <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);
+              width:36px;height:36px;background:#ef4444;border-radius:50% 50% 50% 0;
+              transform:translateX(-50%) rotate(-45deg);border:3px solid white;
+              box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+            </div>
+            <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);
+              width:12px;height:12px;background:white;border-radius:50%;z-index:1;">
+            </div>
+          </div>`,
+        iconSize: [36, 44],
+        iconAnchor: [18, 44],
+        className: '',
+      });
+
+      const marker = L.marker([LAT, LNG], { icon }).addTo(map);
+      marker.bindPopup(`
+        <div style="font-family:sans-serif;padding:4px 2px;min-width:160px;">
+          <div style="font-weight:700;font-size:14px;color:#1a2e1a;margin-bottom:4px;">สถานีวิทยุกู่แก้วเรดิโอ</div>
+          <div style="color:#4a8c5c;font-size:12px;font-weight:600;">FM 93.00 MHz</div>
+          <div style="color:#888;font-size:11px;margin-top:2px;">อ.กู่แก้ว จ.อุดรธานี</div>
+        </div>
+      `, { offset: [0, -40] }).openPopup();
+
+      mapInstanceRef.current = map;
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  return <div ref={mapRef} className="w-full h-full" />;
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 const STREAM_URL = "https://uk5freenew.listen2myradio.com/live.mp3?typeportmount=s1_13082_stream_820118366";
 const UNLOCK_URL = "https://fm93kukeawradio.radio12345.com/";
 const LAT = 17.170219;
@@ -502,7 +591,7 @@ export default function App() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-400 font-semibold uppercase tracking-widest mb-1">เบอร์โทรศัพท์</p>
-                    <a href="tel:0819853404" className="text-radio-dark font-bold text-lg hover:text-radio-green transition-colors">
+                    <a href="tel:0819853404" className="inline-flex items-center gap-2 bg-radio-green text-white px-6 py-3 rounded-2xl font-bold hover:bg-opacity-90 transition-all shadow-md">
                       081-985-3404
                     </a>
                   </div>
@@ -555,21 +644,9 @@ export default function App() {
                   </a>
                 </div>
 
-                {/* Map Iframe */}
-                <div className="relative w-full h-72 md:h-96">
-                  <iframe
-                    title="ตำแหน่งสถานีวิทยุกู่แก้วเรดิโอ"
-                    src={MAPS_EMBED}
-                    className="w-full h-full border-0"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    allowFullScreen
-                  />
-                  {/* Floating label */}
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-lg px-4 py-2 flex items-center gap-2.5 border border-gray-100 pointer-events-none z-10">
-                    <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0 ring-2 ring-red-200"></div>
-                    <span className="text-radio-dark font-bold text-sm whitespace-nowrap">สถานีวิทยุกู่แก้วเรดิโอ</span>
-                  </div>
+                {/* Leaflet Map */}
+                <div className="relative w-full h-72 md:h-[420px]" id="leaflet-map-wrapper">
+                  <LeafletMap />
                 </div>
 
                 {/* Bottom bar */}
