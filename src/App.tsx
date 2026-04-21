@@ -84,10 +84,10 @@ function LeafletMap() {
       const marker = L.marker([LAT, LNG], { icon: redIcon }).addTo(map);
       marker.bindPopup(`
         <div style="font-family:sans-serif;padding:4px 2px;min-width:160px;">
-          <div style="font-weight:700;font-size:14px;color:#1a2e1a;margin-bottom:4px;">สถานีวิทยุกู่แก้วเรดิโอ</div>
+          <div style="font-weight:700;font-size:14px;color:#1a2e1a;margin-bottom:4px;">ระยะสัญญาณ สถานีวิทยุกู่แก้วเรดิโอ</div>
           <div style="color:#4a8c5c;font-size:12px;font-weight:600;">FM 93.00 MHz</div>
           <div style="color:#888;font-size:11px;margin-top:2px;">อ.กู่แก้ว จ.อุดรธานี</div>
-        </div>
+        </div> 
       `).openPopup();
 
       mapInstanceRef.current = map;
