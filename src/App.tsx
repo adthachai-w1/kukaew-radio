@@ -40,80 +40,63 @@ function LeafletMap() {
   useEffect(() => {
     if (mapInstanceRef.current || !mapRef.current) return;
 
-    // Load Leaflet CSS
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     document.head.appendChild(link);
 
-    // Load Leaflet JS
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.onload = () => {
       const L = (window as any).L;
-      const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false }).setView([LAT, LNG], 11);
+      const isMobile = window.innerWidth < 768;
+      const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false }).setView([LAT, LNG], isMobile ? 9 : 10);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // Signal radius circle — ~30km FM coverage
+      // Outer coverage ~30km
       L.circle([LAT, LNG], {
         radius: 30000,
-        color: '#4a8c5c',
-        weight: 2,
-        opacity: 0.8,
-        fillColor: '#4a8c5c',
-        fillOpacity: 0.12,
-        dashArray: '6, 4',
+        color: '#4a8c5c', weight: 2, opacity: 0.9,
+        fillColor: '#4a8c5c', fillOpacity: 0.1,
+        dashArray: '8, 5',
       }).addTo(map);
 
-      // Inner stronger signal circle ~15km
+      // Inner strong signal ~15km
       L.circle([LAT, LNG], {
         radius: 15000,
-        color: '#4a8c5c',
-        weight: 1.5,
-        opacity: 0.5,
-        fillColor: '#4a8c5c',
-        fillOpacity: 0.08,
+        color: '#4a8c5c', weight: 1.5, opacity: 0.6,
+        fillColor: '#4a8c5c', fillOpacity: 0.08,
       }).addTo(map);
 
       // Custom red marker
-      const icon = L.divIcon({
-        html: `
-          <div style="position:relative;width:36px;height:44px;">
-            <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);
-              width:36px;height:36px;background:#ef4444;border-radius:50% 50% 50% 0;
-              transform:translateX(-50%) rotate(-45deg);border:3px solid white;
-              box-shadow:0 2px 8px rgba(0,0,0,0.3);">
-            </div>
-            <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);
-              width:12px;height:12px;background:white;border-radius:50%;z-index:1;">
-            </div>
-          </div>`,
-        iconSize: [36, 44],
-        iconAnchor: [18, 44],
-        className: '',
+      const redIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
       });
 
-      const marker = L.marker([LAT, LNG], { icon }).addTo(map);
+      const marker = L.marker([LAT, LNG], { icon: redIcon }).addTo(map);
       marker.bindPopup(`
         <div style="font-family:sans-serif;padding:4px 2px;min-width:160px;">
           <div style="font-weight:700;font-size:14px;color:#1a2e1a;margin-bottom:4px;">สถานีวิทยุกู่แก้วเรดิโอ</div>
           <div style="color:#4a8c5c;font-size:12px;font-weight:600;">FM 93.00 MHz</div>
           <div style="color:#888;font-size:11px;margin-top:2px;">อ.กู่แก้ว จ.อุดรธานี</div>
         </div>
-      `, { offset: [0, -40] }).openPopup();
+      `).openPopup();
 
       mapInstanceRef.current = map;
+      setTimeout(() => map.invalidateSize(), 100);
     };
     document.head.appendChild(script);
 
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
     };
   }, []);
 
@@ -644,8 +627,8 @@ export default function App() {
                   </a>
                 </div>
 
-                {/* Leaflet Map */}
-                <div className="relative w-full h-72 md:h-[420px]" id="leaflet-map-wrapper">
+                {/* Leaflet Map with radius */}
+                <div className="relative w-full h-72 md:h-96">
                   <LeafletMap />
                 </div>
 
